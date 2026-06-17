@@ -1,8 +1,59 @@
 #!/usr/bin/env python3
 
 '''
-A package for verifying modeled auroral precipitation against SSUSI
-observations.
+A package for verifying modeled auroral precipitation against SSUSI observations.
+
+Stand-Alone Functions
+=====================
+dir_exist : None
+    checks if a path to a directory exists. 
+
+Classes
+=======
+
+PrecipFile : SpaceDate dict 
+    handles precipitation from a model or SSUSI observation
+
+    Functions
+    ==========
+    calc_HP
+        calculates hemispheric power
+    id_boundaries
+        identifies poleward and equatorward boundaries
+    id_PB
+        identfies poleward boundary
+    id_EB
+        identifies equatorward boundary
+    saveas_pickle
+        saves PrecipFile as a hard-copy pickle
+    add_hemiplot
+        creates a hemispheric plot in either magnetic or geographic coords
+
+    Subclasses
+    ==========
+    SSUSIPrecip : SpaceData dict
+        handles SSUSI observations 
+    2DGELPrecip : SpaceData dict
+        handles model data in a 2DGEL.bin format
+    SWMFPrecip : SpaceData dict
+        handles model data in SWMF.idl format
+
+TimeSeriesComparisons : SpaceData dict
+    processes multiple PrecipFiles for timeseries comparisons
+
+    Functions
+    ==========
+    metricsSummary : dict, summaryplot.png
+        yields a suite of accuracy metrics (Bias, RMSE, correlation fits)
+        as well as a summary plot
+    linFit_all : SpaceData dict
+        tests a linear fit between all points of a model and observation
+        yields a dict containing slope, yint, R
+    linFit_lim : slope, yint, R
+        tests a linear fit between a limited range of points of a model and observation
+        yields a dict containing slope, yint, R
+
+
 '''
 
 
@@ -43,6 +94,38 @@ from spacepy.time import Ticktock
 from spacepy.datamodel import dmarray, SpaceData
 from spacepy.pybats import rim
 from spacepy.plot import set_target
+
+
+def dir_exist(path):
+    '''
+    dir_exist checks if a path to a directory exists. 
+    If the directory does not exist, then the function creates that directory.
+    Just a small check so the code doesn't explode ya know?
+    
+    Parameters
+    ==========
+    path : str    
+        Path to desired directory
+
+    Returns
+    ========
+    None
+
+    Example
+    ========
+    Here's how to use dir_exist to check where to dump your files.
+    You can copy-paste below and replace with your desired stuff.
+    ---
+    path = 'figures/energyflux/20100405/
+    dir_exist(path)
+
+    '''
+    
+    if not os.path.isdir(path):
+        os.makedirs(path)
+        print(f'Created dir: {path}')
+    else:
+        print(f'Dir exists: {path}')
 
 
 class PrecipFile(SpaceData):
@@ -154,7 +237,7 @@ class PrecipFile(SpaceData):
         pass
 
 
-    def add_hemi_plot(self, coord='mag', target=None, loc=111):
+    def add_hemiplot(self, coord='mag', target=None, loc=111):
         '''
         Add a hemispheric plot figure.
 
