@@ -47,15 +47,54 @@ from spacepy.plot import set_target
 
 class PrecipFile(SpaceData):
     '''
-    Lots of docs here!
+    PrecipFile is a SpaceData dictionary
+    that handles a precipitation file for event comparison.
+
+    Attributes
+    ==========
+    time : 1D array 
+        time series of the observation / simulation
+    - coordinates (magnetic and geographic)
+    - energy flux
+    - average energy
+
+    Meta-Attributes
+    ===============
+    These are the attributes for the overall precipitation file. 
+
+    start_date, end_date : datetime.datetime
+        desired time range of data
+    datalabel, datapath : string
+        data label and path to the data directory
+
+    Example
+    =======
+    Here's how to instantiate a PrecipFile. 
+    You can copy-paste below and replace with your desired stuff.
+    ---
+    # Step 1: Choose your start and end dates as datetime objects
+    start_date = datetime.datetime(year, month, day, hour, minute, second)
+    end_date   = start_date + datetime.timedelta(days=2.5)
+
+    # Step 2: Specify your data source 
+    datalabel = 'Data Label'
+    datapath = '/home/you/yourdata/'
+
+    # Step 3: Plug in all of the above to instantiate a PrecipFile. 
+    precipfile = ssusi_verif.PrecipFile(start_date, end_date, datalabel, datapath)
+
     '''
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, start_date, end_date, datalabel, datapath, *args, **kwargs):
         super(PrecipFile, self).__init__(*args, **kwargs)  # Init as SpaceData.
 
-        self.attrs['label'] = 10 
-        self.attrs['nlat'] = 10
-        self['avee'] = np.zeros(self.attrs['nlon'], self.attrs['nlat'])
+        # time range of data
+        self.attrs['start_date'] = start_date 
+        self.attrs['end_date']  = end_date
+
+        # description of data
+        self.attrs['datalabel'] = datalabel
+        self.attrs['datapath'] = datapath
 
     def calc_hp(self, window):
         '''
@@ -134,7 +173,6 @@ class PrecipFile(SpaceData):
         >>> pbs._calc_ndens(mhd)
         '''
         pass
-
 
 class SwmfPrecip(PrecipFile):
     '''
