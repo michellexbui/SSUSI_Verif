@@ -52,11 +52,18 @@ class PrecipFile(SpaceData):
 
     Attributes
     ==========
-    time : 1D array 
-        time series of the observation / simulation
-    - coordinates (magnetic and geographic)
-    - energy flux
-    - average energy
+    Every PrecipFile should have this information gathered for processing.
+
+    time : 1D np.array 
+        time series of the observation / simulation in datetime.datetime
+    mlat, mlon, mlt : 2D np.array 
+        magnetic coordinates [º]
+    glat, glon : 2D np.array
+        geographic coordinates [º]
+    avee : 2D np.array
+        Average energy [keV]
+    eflux : 2D np.array
+        Energy flux [mW/m^2]
 
     Meta-Attributes
     ===============
@@ -172,6 +179,24 @@ class PrecipFile(SpaceData):
         >>> mhd = pbs.Bats2d('spacepy-code/spacepy/pybats/slice2d_species.out')
         >>> pbs._calc_ndens(mhd)
         '''
+        pass
+
+class SSUSIPrecip(PrecipFile):
+    '''
+    SSUSIPrecip is a subclass of PrecipFile
+    for handling SSUSI data.
+    '''
+
+    def __init__(self, filename, *args, **kwargs):
+        super(PrecipFile, self).__init__(*args, **kwargs)  # Init as SpaceData.
+
+        self.attrs['file'] = filename
+
+        data = rim.Iono(filename)
+
+        self['avee'] = data['n_ave']
+
+    def calc_hp(self):
         pass
 
 class SwmfPrecip(PrecipFile):
