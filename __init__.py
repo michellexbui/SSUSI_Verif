@@ -58,10 +58,10 @@ TimeSeriesComparisons : SpaceData dict
 
 
 
-#imports
+# imports
+# =======
 import os
 import sys
-#sys.path.append('/home/mxbui/')
 
 import supermag
 from supermag import supermag_api
@@ -74,7 +74,7 @@ from pyitm.fileio.util import read_all_files
 import matplotlib.pyplot as plt
 import matplotlib.path as mpath
 import cartopy.crs as ccrs
-from cartopy.feature.nightshade import Nightshade
+import cartopy.feature.nightshade as cfn
 
 import numpy as np
 import pandas as pd
@@ -108,11 +108,11 @@ def dir_exist(path):
         Path to desired directory
 
     Returns
-    ========
+    =======
     None
 
     Example
-    ========
+    =======
     Here's how to use dir_exist to check where to dump your files.
     You can copy-paste below and replace with your desired stuff.
     ---
@@ -126,6 +126,48 @@ def dir_exist(path):
         print(f'Created dir: {path}')
     else:
         print(f'Dir exists: {path}')
+
+def add_circle_boundary(ax):
+    '''
+    Forces a circular boundary for a Cartopy map.
+    Takes the reference code below as a useful function.
+
+    Reference: Cartopy always circular stereo example
+    https://scitools.org.uk/cartopy/docs/v0.15/examples/always_circular_stereo.html 
+
+    Parameters
+    ==========
+    ax : Matplotlib axis object
+
+    Returns
+    =======
+    None
+
+    Examples
+    ========
+    Here's how to use add_circle_boundary to enforce a circular cartopy map.
+    You can copy-paste below and replace with your desired stuff.
+    ---
+    # create a figure in polar
+    fig = plt.figure(figsize=(20,10))
+    ax = fig.add_subplot(1,2,1, projection=ccrs.NorthPolarStereo())
+
+    # add plot content here
+
+    # finalize figure
+    ax.set_title('Title of the Plot')
+    ax.set_extent([-180, 180, 60, 90], crs=ccrs.PlateCarree())
+    add_circle_boundary(ax)
+
+    '''
+
+    theta = np.linspace(0, 2*np.pi, 100) 
+    center, radius = [0.5, 0.5], 0.5
+    verts = np.vstack([np.sin(theta), np.cos(theta)]).T
+    circle = mpath.Path(verts * radius + center)
+    ax.set_boundary(circle, transform=ax.transAxes)
+
+    return
 
 
 class PrecipFile(SpaceData):
@@ -270,17 +312,93 @@ class SSUSIPrecip(PrecipFile):
     for handling SSUSI data.
     '''
 
-    def __init__(self, filename, *args, **kwargs):
+    def __init__(self, start_date, end_date, datalabel, datapath, *args, **kwargs):
         super(PrecipFile, self).__init__(*args, **kwargs)  # Init as SpaceData.
 
-        self.attrs['file'] = filename
+        # time range of data
+        self.attrs['start_date'] = start_date 
+        self.attrs['end_date']  = end_date
 
-        data = rim.Iono(filename)
+        # description of data
+        self.attrs['datalabel'] = datalabel
+        self.attrs['datapath'] = datapath
 
-        self['avee'] = data['n_ave']
 
-    def calc_hp(self):
-        pass
+    def find_SSUSI_path(date_str, sat_name, sourcename):
+    '''
+    Download SSUSI EDR (Environmental Data Record) aurora data from 'cdaweb' public server if run anywhere 
+    or 'mia' server if run locally on mia
+    
+    Downloaded '.nc' files are located in uplodat/{date_str}/ 
+
+    Parameters
+    ----------
+    date_str : str   
+        Desired date as a string, formatted as 'YYYYMMDD' 
+        where   YYYY is the four-digit year, 
+                MM is a zero-padded month, and 
+                DD is a zero-padded day
+    sat_name : str
+        Desired satellite name ('f17', 'f18', etc.) as a string.
+        See here for data availability: https://docs.google.com/spreadsheets/d/1QyxeKCH3AZUILgoSASgSuJIv4_F9cR3c1689ooKb8dk/edit?gid=0#gid=0 
+    sourcename : str
+        Desired data source. 
+        If 'cdaweb', download 'nc' from CDAWeb public server and save to uplodat/{date_str}
+        If running locally on 'mia', data can be sourced from mia's backup repo
+        
+    Returns
+    -------
+    path_to_dir : str
+        Path to SSUSI EDR aurora data .nc files
+    
+    Examples
+    --------
+    # source the EDR aurora data .nc files
+    dirpath = find_SSUSI_path(date_str,sat_name,sourcename)
+
+    '''
+
+    # year and day-of-year
+    year = date_str[0:4]   
+    datetime_Ymd = dt.datetime.strptime(date_str, '%Y%m%d')
+    datetime_doy = datetime_Ymd.timetuple().tm_yday
+    doy = f'{datetime_doy:03d}'
+
+    if sourcename == 'mia':
+        # SSUSI directory path
+        path_to_dir = f'/backup/Data/ssusi/data/ssusi.jhuapl.edu/dataN/{sat_name}/apl/edr-aur/{year}/{doy}/'
+    elif sourcename == 'cdaweb':
+        # CHECK IF uplodat/ and uplodat/{date_str}/ exists
+        dir_exist('uplodat/')
+        dir_exist(f'uplodat/{date_str}')
+        dir_exist(f'uplodat/{date_str}/{sat_name}')
+
+        # then upload data
+        urlstr = f'https://cdaweb.gsfc.nasa.gov/pub/data/dmsp/dmsp{sat_name}/ssusi/data/edr-aurora/{year}/{doy}/'
+        # wget index.html 
+        os.system(f'wget -P uplodat/{date_str}/{sat_name}/ {urlstr}') 
+
+        # read index.html for filenames
+        filename = f'uplodat/{date_str}/{sat_name}/index.html' ; files = []
+        with open(filename, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+
+        lines = html_content.splitlines() 
+        for eachline in lines:
+            index_start = eachline.find('dmsp')
+            index_end = eachline.find('.nc')
+
+            if len(eachline[index_start:index_end+3]) > 0:
+                files.append(eachline[index_start:index_end+3])
+
+        # wget files into uplodat/{date_str}
+        for file in files:
+            os.system(f'wget -P uplodat/{date_str}/{sat_name}/ {urlstr}{file}')
+        
+        # success u have the files!
+        path_to_dir = f'uplodat/{date_str}/{sat_name}/'
+
+    return path_to_dir
 
 class SwmfPrecip(PrecipFile):
     '''
