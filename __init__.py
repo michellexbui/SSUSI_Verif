@@ -6,7 +6,12 @@ A package for verifying modeled auroral precipitation against SSUSI observations
 Stand-Alone Functions
 =====================
 dir_exist : None
-    checks if a path to a directory exists. 
+    checks if a path to a directory exists
+add_circular_boundary : None
+    forces a circular boundary on cartopy polar plots
+plot_polar : 
+    create well-formatted polar plots for SUSSI applications
+
 
 Classes
 =======
