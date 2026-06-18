@@ -277,6 +277,10 @@ class PrecipFile(SpaceData):
     datalabel, datapath : string
         data label and path to the data directory
 
+    Functions
+    =========
+    
+
     Example
     =======
     Here's how to instantiate a PrecipFile. 
@@ -386,11 +390,10 @@ class PrecipFile(SpaceData):
 
 class SSUSIPrecip(PrecipFile):
     '''
-    SSUSIPrecip is a subclass of PrecipFile
-    for handling SSUSI data.
+    SSUSIPrecip is a subclass of PrecipFile for handling SSUSI data.
     '''
 
-    def __init__(self, start_date, end_date, datalabel, datapath, *args, **kwargs):
+    def __init__(self, start_date, end_date, datalabel, datapath='cdaweb', *args, **kwargs):
         super(PrecipFile, self).__init__(*args, **kwargs)  # Init as SpaceData.
 
         # time range of data
@@ -399,10 +402,32 @@ class SSUSIPrecip(PrecipFile):
 
         # description of data
         self.attrs['datalabel'] = datalabel
-        self.attrs['datapath'] = datapath
+        self.attrs['datapath']  = datapath
+        
+        strsats = ['f16', 'f17', 'f18', 'f19']
+        strdates = []
+        for i in range(0, (end_date.date()-start_date.date()).days + 1):
+            strdates.append((start_date.date() + dt.timedelta(i)).strftime('%Y%m%d'))
+
+        # check if SSUSI data exists
+        # default: cdaweb
+        for sat_name in strsats:
+            for date_str in strdates:
+                try:
+                    # find the path of SSUSI EDR aurora data
+                    dirpath = self.find_SSUSI_path(date_str,sat_name,datapath)
+
+                    # pickle the data
+                    pickled_day = self.pickle_ssusiday(date_str, sat_name, dirpath)
+                    print(f'Pickled {date_str} at {sat_name}')
+                    
+                except:
+                    print(f'File not found for {sat_name} on {date_str}, passing')
+                    pass
 
 
-    def find_SSUSI_path(date_str, sat_name, sourcename='cdaweb'):
+
+    def find_SSUSI_path(self, date_str, sat_name, sourcename='cdaweb'):
         '''
         Download SSUSI EDR (Environmental Data Record) aurora data from 'cdaweb' public server.
         If you're on mia server, you can specify mia
@@ -486,9 +511,9 @@ class SSUSIPrecip(PrecipFile):
 
         return path_to_dir
     
-    def pickle_ssusiday(date_str, sat_name, dirpath):
+    def pickle_ssusiday(self, date_str, sat_name, dirpath):
         '''
-        Objective: Serialize '.nc' data files to Python pickle objects, which allow for efficient storage and de-serialization.
+        Serialize '.nc' data files to Python pickle objects, which allow for efficient storage and de-serialization.
 
         Parameters
         ----------
@@ -522,7 +547,6 @@ class SSUSIPrecip(PrecipFile):
             pickled_day = pickle_ssusiday(date_str,sat_name, dirpath)
 
         '''
-        # MXB NOTE: should a pickle have one dataset (i.e. 1 timestamp in 1 day) or should a pickle have multiple datasets within a day?
         # whole day pickle
         pklname = f'pickles/ssusi_{sat_name}_{date_str}.pkl'
         date_dataset = {}
@@ -552,12 +576,16 @@ class SSUSIPrecip(PrecipFile):
         with open(pklname, 'rb') as file:
             pickled_ssusiday = pickle.load(file)
 
+        if self.attrs['datapath'] == 'cdaweb':
+            # make space
+            os.system(f'rm -r uplodat/{date_str}/')
+
         # return the data to be used
         return pickled_ssusiday
 
-    def plot_SSUSImaps(strlist_of_sats, strlist_of_dates, sourcename='cdaweb'):
+    def plot_SSUSImaps(self, strlist_of_sats, strlist_of_dates, sourcename='cdaweb'):
         '''
-        Objective: Given a list of satellites and dates, create and save maps of energy flux and mean energy.
+        Given a list of satellites and dates, create and save maps of energy flux and mean energy.
 
         Parameters
         ----------
@@ -674,17 +702,24 @@ class SSUSIPrecip(PrecipFile):
                     # make space
                     os.system(f'rm -r uplodat/{date_str}/')
 
-class SwmfPrecip(PrecipFile):
+class SWMFPrecip(PrecipFile):
     '''
     Subclass for handling swmf output.
     '''
 
-    def __init__(self, filename, *args, **kwargs):
+    def __init__(self, start_date, end_date, datalabel, datapath, *args, **kwargs):
         super(PrecipFile, self).__init__(*args, **kwargs)  # Init as SpaceData.
 
-        self.attrs['file'] = filename
+        # time range of data
+        self.attrs['start_date'] = start_date 
+        self.attrs['end_date']  = end_date
 
-        data = rim.Iono(filename)
+        # description of data
+        self.attrs['datalabel'] = datalabel
+        self.attrs['datapath'] = datapath
+
+        # load the data
+        data = rim.Iono(datapath)
 
         self['avee'] = data['n_ave']
 
