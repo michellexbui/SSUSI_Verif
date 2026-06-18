@@ -1,3 +1,7 @@
+# don't need the save heavy files onto github lol
+pickles/
+uplodat/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
