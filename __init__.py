@@ -393,7 +393,7 @@ class SSUSIPrecip(PrecipFile):
     SSUSIPrecip is a subclass of PrecipFile for handling SSUSI data.
     '''
 
-    def __init__(self, start_date, end_date, datalabel, datapath='cdaweb', *args, **kwargs):
+    def __init__(self, start_date, end_date, datalabel='SSUSI', datapath='cdaweb', *args, **kwargs):
         super(PrecipFile, self).__init__(*args, **kwargs)  # Init as SpaceData.
 
         # time range of data
@@ -410,19 +410,20 @@ class SSUSIPrecip(PrecipFile):
             strdates.append((start_date.date() + dt.timedelta(i)).strftime('%Y%m%d'))
 
         # check if SSUSI data exists
-        # default: cdaweb
-        for sat_name in strsats:
-            for date_str in strdates:
+        # default: cdaweb   
+        for date_str in strdates:
+            print(f'For {date_str}:')
+            for sat_name in strsats:
                 try:
                     # find the path of SSUSI EDR aurora data
                     dirpath = self.find_SSUSI_path(date_str,sat_name,datapath)
 
                     # pickle the data
                     pickled_day = self.pickle_ssusiday(date_str, sat_name, dirpath)
-                    print(f'Pickled {date_str} at {sat_name}')
+                    print(f'\t {sat_name} pickled')
                     
                 except:
-                    print(f'File not found for {sat_name} on {date_str}, passing')
+                    print(f'\t {sat_name} not available, passed')
                     pass
 
 
@@ -547,6 +548,8 @@ class SSUSIPrecip(PrecipFile):
             pickled_day = pickle_ssusiday(date_str,sat_name, dirpath)
 
         '''
+        dir_exist('pickles/')
+
         # whole day pickle
         pklname = f'pickles/ssusi_{sat_name}_{date_str}.pkl'
         date_dataset = {}
@@ -571,14 +574,16 @@ class SSUSIPrecip(PrecipFile):
 
         # MXB NOTE: do i need to close the file?
         f.close()
+        print(f'Pickled!!')
         
         # open as a read only
         with open(pklname, 'rb') as file:
             pickled_ssusiday = pickle.load(file)
-
+        
         if self.attrs['datapath'] == 'cdaweb':
             # make space
             os.system(f'rm -r uplodat/{date_str}/')
+            print(f'Removed the original file')
 
         # return the data to be used
         return pickled_ssusiday
