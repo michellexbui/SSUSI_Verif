@@ -413,6 +413,7 @@ class SSUSIPrecip(PrecipFile):
         # default: cdaweb   
         for date_str in strdates:
             print(f'For {date_str}:')
+            
             for sat_name in strsats:
                 try:
                     # find the path of SSUSI EDR aurora data
@@ -426,6 +427,10 @@ class SSUSIPrecip(PrecipFile):
                     print(f'\t {sat_name} not available, passed')
                     pass
 
+            if self.attrs['datapath'] == 'cdaweb':
+                # make space
+                os.system(f'rm -r uplodat/{date_str}/')
+                print(f'Removed the original file')
 
 
     def find_SSUSI_path(self, date_str, sat_name, sourcename='cdaweb'):
@@ -579,11 +584,6 @@ class SSUSIPrecip(PrecipFile):
         # open as a read only
         with open(pklname, 'rb') as file:
             pickled_ssusiday = pickle.load(file)
-        
-        if self.attrs['datapath'] == 'cdaweb':
-            # make space
-            os.system(f'rm -r uplodat/{date_str}/')
-            print(f'Removed the original file')
 
         # return the data to be used
         return pickled_ssusiday
